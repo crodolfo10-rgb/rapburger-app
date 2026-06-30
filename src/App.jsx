@@ -883,6 +883,124 @@ function RRHHView({ card, sTitle, btn, inp, grid, showToast }) {
 
   const editEmpleado = (emp) => { setForm(emp.form); setEditId(emp.id); setTab('nueva'); };
 
+  // ── IMPRIMIR / PDF LIQUIDACIÓN INDIVIDUAL ──
+  const imprimirLiquidacion = (emp) => {
+    const f = emp.form;
+    const l = emp.liq;
+    const periodoTexto = new Date(emp.periodo + '-01').toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+    const fmtP = v => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v || 0);
+
+    const rowsHaberes = [
+      ['Sueldo Base', l.sueldoProporcional],
+      l.pagoHorasExtra > 0 ? ['Horas Extra', l.pagoHorasExtra] : null,
+      l.gratificacion > 0 ? ['Gratificación Legal', l.gratificacion] : null,
+      l.bonos > 0 ? ['Bonos / Incentivos', l.bonos] : null,
+      l.comisiones > 0 ? ['Comisiones', l.comisiones] : null,
+      l.colacion > 0 ? ['Colación (no imponible)', l.colacion] : null,
+      l.movilizacion > 0 ? ['Movilización (no imponible)', l.movilizacion] : null,
+      l.asigFamiliar > 0 ? ['Asignación Familiar (no imponible)', l.asigFamiliar] : null,
+    ].filter(Boolean);
+
+    const rowsDescuentos = [
+      ['AFP (10% + comisión)', l.dscAfpTotal],
+      ['Salud (' + (f.salud === 'isapre' ? 'Isapre' : 'Fonasa 7%') + ')', l.dscSalud],
+      l.dscAfcTrabajador > 0 ? ['Seguro de Cesantía (0,6%)', l.dscAfcTrabajador] : null,
+      l.impuestoUnico > 0 ? ['Impuesto Único 2ª Categoría', l.impuestoUnico] : null,
+      l.anticipos > 0 ? ['Anticipos', l.anticipos] : null,
+      l.otrosDesc > 0 ? ['Otros Descuentos', l.otrosDesc] : null,
+    ].filter(Boolean);
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Liquidación de Sueldo - ${f.nombre}</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color:#111; padding:30px; max-width:780px; margin:0 auto; font-size:13px; }
+  .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #E8191A; padding-bottom:14px; margin-bottom:20px; }
+  .header img { height:50px; }
+  .header .title { text-align:right; }
+  .header h1 { font-size:18px; margin:0; color:#111; }
+  .header .sub { font-size:11px; color:#666; }
+  .datos { display:grid; grid-template-columns:1fr 1fr; gap:6px 24px; margin-bottom:20px; font-size:12px; }
+  .datos div span.lbl { color:#666; font-weight:600; display:inline-block; width:120px; }
+  table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+  th { background:#111; color:#fff; text-align:left; padding:7px 10px; font-size:10px; letter-spacing:0.5px; text-transform:uppercase; }
+  td { padding:6px 10px; border-bottom:1px solid #eee; font-size:12px; }
+  td.val { text-align:right; font-family:'Courier New',monospace; }
+  .section-title { font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#E8191A; margin:14px 0 4px; }
+  .total-row td { font-weight:800; background:#f5f5f5; border-top:2px solid #333; }
+  .liquido { background:#111; color:#fff; padding:14px 16px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; margin-top:16px; }
+  .liquido .lbl { font-size:12px; text-transform:uppercase; letter-spacing:1px; }
+  .liquido .amt { font-size:22px; font-weight:800; font-family:'Courier New',monospace; }
+  .firmas { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:50px; }
+  .firma { border-top:1px solid #333; padding-top:6px; text-align:center; font-size:11px; color:#666; }
+  .footer { margin-top:30px; font-size:9px; color:#999; text-align:center; border-top:1px solid #eee; padding-top:10px; }
+  @media print { body{ padding:10px; } .no-print{ display:none; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <img src="/logo.png" alt="Rap Burger" />
+    <div class="title">
+      <h1>LIQUIDACIÓN DE SUELDO</h1>
+      <div class="sub">Período: ${periodoTexto.charAt(0).toUpperCase() + periodoTexto.slice(1)}</div>
+    </div>
+  </div>
+
+  <div class="datos">
+    <div><span class="lbl">Trabajador:</span><strong>${f.nombre || '—'}</strong></div>
+    <div><span class="lbl">RUT:</span>${f.rut || '—'}</div>
+    <div><span class="lbl">Cargo:</span>${f.cargo || '—'}</div>
+    <div><span class="lbl">Tipo de Contrato:</span>${f.tipoContrato === 'indefinido' ? 'Indefinido' : 'Plazo Fijo'}</div>
+    <div><span class="lbl">Días Trabajados:</span>${f.diasTrabajados || 30} de 30</div>
+    <div><span class="lbl">Sistema de Salud:</span>${f.salud === 'isapre' ? 'Isapre' : 'Fonasa'}</div>
+  </div>
+
+  <div class="section-title">Haberes</div>
+  <table>
+    <thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead>
+    <tbody>
+      ${rowsHaberes.map(([n,v]) => `<tr><td>${n}</td><td class="val">${fmtP(v)}</td></tr>`).join('')}
+      <tr class="total-row"><td>TOTAL HABERES</td><td class="val">${fmtP(l.totalHaberes)}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-title">Descuentos</div>
+  <table>
+    <thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead>
+    <tbody>
+      ${rowsDescuentos.map(([n,v]) => `<tr><td>${n}</td><td class="val">-${fmtP(v)}</td></tr>`).join('')}
+      <tr class="total-row"><td>TOTAL DESCUENTOS</td><td class="val">-${fmtP(l.totalDescuentos)}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="liquido">
+    <span class="lbl">Sueldo Líquido a Pago</span>
+    <span class="amt">${fmtP(l.sueldoLiquido)}</span>
+  </div>
+
+  <div class="firmas">
+    <div class="firma">Firma del Trabajador</div>
+    <div class="firma">Firma del Empleador</div>
+  </div>
+
+  <div class="footer">
+    Documento generado el ${new Date().toLocaleDateString('es-CL')} · Rap Burger · Control Financiero
+  </div>
+
+  <script class="no-print">
+    window.onload = () => window.print();
+  </script>
+</body>
+</html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+  };
+
   const deleteEmpleado = async (id) => {
     try { await window.storage.delete('liq:' + periodo + ':' + id); showToast('Eliminado'); setDelConfirm(null); await loadEmpleados(); }
     catch { showToast('Error al eliminar', 'err'); }
@@ -969,6 +1087,7 @@ function RRHHView({ card, sTitle, btn, inp, grid, showToast }) {
                       <td style={{ padding:'9px 12px' }}>
                         <div style={{ display:'flex', gap:5 }}>
                           <button style={{ ...btn(BRAND.border, BRAND.text), padding:'3px 8px', fontSize:10 }} onClick={()=>editEmpleado(e)}>✏️</button>
+                          <button style={{ ...btn(BRAND.blue+'22', BRAND.blue), padding:'3px 8px', fontSize:10 }} onClick={()=>imprimirLiquidacion(e)} title="Imprimir / PDF">🖨️</button>
                           <button style={{ ...btn(BRAND.red+'22', BRAND.red), padding:'3px 8px', fontSize:10 }} onClick={()=>setDelConfirm(e.id)}>🗑</button>
                         </div>
                       </td>
@@ -1122,6 +1241,12 @@ function RRHHView({ card, sTitle, btn, inp, grid, showToast }) {
       </div>
 
       <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16, gap:8 }}>
+        {editId && (
+          <button style={btn(BRAND.blue, '#fff')} onClick={() => {
+            const current = empleados.find(e => e.id === editId);
+            if (current) imprimirLiquidacion({ ...current, form, liq: liqPreview });
+          }}>🖨️ Imprimir / PDF</button>
+        )}
         <button style={btn()} onClick={saveEmpleado}>💾 {editId ? 'Actualizar' : 'Guardar'} liquidación</button>
       </div>
     </div>
