@@ -241,14 +241,12 @@ function KpiCard({ label, value, sub, accent = BRAND.red, bar, barGood = 60 }) {
 
 function RapBurgerLogo({ size = 32 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <rect width="40" height="40" rx="8" fill={BRAND.red} />
-      <rect x="8" y="10" width="24" height="3" rx="1.5" fill={BRAND.yellow} />
-      <rect x="6" y="15" width="28" height="3" rx="1.5" fill={BRAND.text} />
-      <ellipse cx="20" cy="22" rx="14" ry="5" fill="#8B4513" />
-      <rect x="6" y="25" width="28" height="3" rx="1.5" fill={BRAND.text} />
-      <rect x="8" y="30" width="24" height="3" rx="1.5" fill="#c8a060" />
-    </svg>
+    <img
+      src="/logo.png"
+      alt="Rap Burger"
+      height={size}
+      style={{ objectFit: 'contain', display: 'block' }}
+    />
   );
 }
 
@@ -680,13 +678,10 @@ export default function App() {
   return (
     <div style={{ fontFamily:"'Inter','Helvetica Neue',sans-serif", background: BRAND.black, minHeight:'100vh', color: BRAND.text, fontSize:14 }}>
 
-      <div style={{ background: BRAND.dark, borderBottom:`1px solid ${BRAND.border}`, padding:'0 20px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <RapBurgerLogo size={36} />
-          <div>
-            <div style={{ fontWeight:900, fontSize:16, letterSpacing:-0.5, lineHeight:1 }}>RAP <span style={{ color: BRAND.red }}>BURGER</span></div>
-            <div style={{ fontSize:9, color: BRAND.muted, letterSpacing:2, textTransform:'uppercase', fontWeight:700 }}>Control Financiero</div>
-          </div>
+      <div style={{ background: BRAND.dark, borderBottom:`1px solid ${BRAND.border}`, padding:'0 20px', height:68, display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <RapBurgerLogo size={52} />
+          <div style={{ fontSize:9, color: BRAND.muted, letterSpacing:2, textTransform:'uppercase', fontWeight:700, borderLeft:`1px solid ${BRAND.border}`, paddingLeft:12 }}>Control<br/>Financiero</div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div style={{ width:7, height:7, borderRadius:'50%', background: BRAND.green, boxShadow:`0 0 8px ${BRAND.green}` }} />
