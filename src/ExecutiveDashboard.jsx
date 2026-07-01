@@ -179,8 +179,9 @@ export default function ExecutiveDashboard({ records }) {
   const chartData = useMemo(()=>filtered.map(r=>({
     fecha: r.date.slice(5), fechaFull: r.date,
     ventasBrutas: r.ind.ventasBrutas||0,
-    iva: r.ind.iva||((r.ind.ventasBrutas||0)*19/119),
-    ventas: r.ind.ventasNetas||0,
+    iva: r.ind.iva || ((r.ind.ventasBrutas||0)*19/119),
+    // Recalculamos ventas netas siempre desde brutas para garantizar consistencia
+    ventas: r.ind.ventasBrutas > 0 ? (r.ind.ventasBrutas/1.19) - (r.ind.descuentos||0) : (r.ind.ventasNetas||0),
     costo: r.ind.costoVenta||0,
     margen: r.ind.margenBruto||0,
     sueldos: r.ind.sueldos||0,
@@ -202,8 +203,12 @@ export default function ExecutiveDashboard({ records }) {
     if(!filtered.length) return {};
     const sum = k => filtered.reduce((s,r)=>s+(r.ind[k]||0),0);
     const ventasBrutas = sum('ventasBrutas');
-    const ventasNetas  = sum('ventasNetas');
-    const ivaTotal = filtered.reduce((s,r)=>s+(r.ind.iva||r.ind.ventasBrutas*19/119),0);
+    // Recalcular ventasNetas desde brutas para corregir registros históricos
+    const ventasNetas  = filtered.reduce((s,r)=>{
+      const brutas = r.ind.ventasBrutas||0;
+      return s + (brutas > 0 ? (brutas/1.19) - (r.ind.descuentos||0) : (r.ind.ventasNetas||0));
+    }, 0);
+    const ivaTotal = filtered.reduce((s,r)=>s+(r.ind.iva||(r.ind.ventasBrutas||0)*19/119),0);
     const costoVenta   = sum('costoVenta');
     const sueldos      = sum('sueldos');
     const ebitda       = sum('ebitda');
@@ -213,8 +218,8 @@ export default function ExecutiveDashboard({ records }) {
     const sueldosPct   = ventasNetas>0?(sueldos/ventasNetas)*100:0;
     const ebitdaPct    = ventasNetas>0?(ebitda/ventasNetas)*100:0;
     const half = Math.floor(filtered.length/2);
-    const v1=filtered.slice(0,half).reduce((s,r)=>s+(r.ind.ventasNetas||0),0);
-    const v2=filtered.slice(half).reduce((s,r)=>s+(r.ind.ventasNetas||0),0);
+    const v1=filtered.slice(0,half).reduce((s,r)=>{const b=r.ind.ventasBrutas||0;return s+(b>0?(b/1.19)-(r.ind.descuentos||0):(r.ind.ventasNetas||0));},0);
+    const v2=filtered.slice(half).reduce((s,r)=>{const b=r.ind.ventasBrutas||0;return s+(b>0?(b/1.19)-(r.ind.descuentos||0):(r.ind.ventasNetas||0));},0);
     const deltaV = v1>0?((v2-v1)/v1)*100:0;
     return {
       ventasBrutas, ventasNetas, ivaTotal, costoVenta, sueldos, ebitda, margenBruto,
@@ -222,7 +227,7 @@ export default function ExecutiveDashboard({ records }) {
       avgTicket: sum('clientes')>0?ventasNetas/sum('clientes'):0,
       totalClientes: sum('clientes'),
       flujo: sum('flujoCaja'), dias: filtered.length, deltaV,
-      diasConVentas: filtered.filter(r=>r.ind.ventasNetas>0).length,
+      diasConVentas: filtered.filter(r=>r.ind.ventasBrutas>0||r.ind.ventasNetas>0).length,
     };
   },[filtered]);
 
