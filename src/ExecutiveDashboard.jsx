@@ -16,7 +16,7 @@ const B = {
   muted:'#3A3A3A', dim:'#666', text:'#F0F0F0', textDim:'#888', textSub:'#555',
 };
 
-const IVA = 0.19;
+const IVA_FACTOR = 19/119; // IVA contenido dentro del precio bruto (método correcto Chile)
 const fmt  = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
 const fmtM = v => { const a=Math.abs(v||0); if(a>=1000000) return (v/1000000).toFixed(1)+'M'; if(a>=1000) return (v/1000).toFixed(0)+'K'; return Math.round(v||0).toString(); };
 const pct  = v => (v||0).toFixed(1)+'%';
@@ -179,7 +179,7 @@ export default function ExecutiveDashboard({ records }) {
   const chartData = useMemo(()=>filtered.map(r=>({
     fecha: r.date.slice(5), fechaFull: r.date,
     ventasBrutas: r.ind.ventasBrutas||0,
-    iva: (r.ind.ventasBrutas||0)*IVA,
+    iva: r.ind.iva||((r.ind.ventasBrutas||0)*19/119),
     ventas: r.ind.ventasNetas||0,
     costo: r.ind.costoVenta||0,
     margen: r.ind.margenBruto||0,
@@ -203,7 +203,7 @@ export default function ExecutiveDashboard({ records }) {
     const sum = k => filtered.reduce((s,r)=>s+(r.ind[k]||0),0);
     const ventasBrutas = sum('ventasBrutas');
     const ventasNetas  = sum('ventasNetas');
-    const ivaTotal     = ventasBrutas * IVA;
+    const ivaTotal = filtered.reduce((s,r)=>s+(r.ind.iva||r.ind.ventasBrutas*19/119),0);
     const costoVenta   = sum('costoVenta');
     const sueldos      = sum('sueldos');
     const ebitda       = sum('ebitda');
@@ -280,7 +280,7 @@ export default function ExecutiveDashboard({ records }) {
     const ventasMes = records.filter(r=>r.date.slice(0,7)===mesFlujo);
     const totalVentas = ventasMes.reduce((s,r)=>s+(r.ind.ventasNetas||0),0);
     const totalBrutas = ventasMes.reduce((s,r)=>s+(r.ind.ventasBrutas||0),0);
-    const ivaDelMes   = totalBrutas * IVA;
+    const ivaDelMes = ventasMes.reduce((s,r)=>s+(r.ind.iva||r.ind.ventasBrutas*19/119),0);
     return { semanas:Object.values(byWeek), totalVentas, totalBrutas, ivaDelMes, movsMes };
   },[movimientos,mesFlujo,records]);
 
@@ -368,7 +368,7 @@ export default function ExecutiveDashboard({ records }) {
           {label:'Nómina sobre ventas',val:kpis.sueldosPct,unit:'%',good:30,warn:36,invert:true,bench:'≤30%'},
           {label:'EBITDA',val:kpis.ebitdaPct,unit:'%',good:15,warn:8,invert:false,bench:'≥15%'},
           {label:'Flujo de Caja',val:kpis.flujo,unit:'',good:0,warn:-100000,invert:false,bench:'Positivo'},
-          {label:'IVA por pagar (est.)',val:kpis.ivaTotal,unit:'',good:null,warn:null,bench:'19% s/ventas brutas'},
+          {label:'IVA por pagar (est.)',val:kpis.ivaTotal,unit:'',good:null,warn:null,bench:'19/119 de ventas brutas'},
         ].map(({label,val,unit,good,warn,invert,bench})=>{
           const v=parseFloat(val)||0;
           let ok,alerta;
@@ -408,7 +408,7 @@ export default function ExecutiveDashboard({ records }) {
               <Legend wrapperStyle={{fontSize:10,color:B.dim}}/>
               <Area type="monotone" dataKey="ventasBrutas" name="Ventas Brutas" stroke={B.orange} fill="url(#gO)" strokeWidth={2} dot={false}/>
               <Area type="monotone" dataKey="ventas" name="Ventas Netas" stroke={B.red} fill="url(#gR)" strokeWidth={2} dot={false}/>
-              <Bar dataKey="iva" name="IVA 19%" fill={B.yellow} fillOpacity={0.7} radius={[2,2,0,0]}/>
+              <Bar dataKey="iva" name="IVA (19/119)" fill={B.yellow} fillOpacity={0.7} radius={[2,2,0,0]}/>
             </ComposedChart>
           </ResponsiveContainer>
         )}
