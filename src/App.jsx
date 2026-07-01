@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import ExecutiveDashboard from "./ExecutiveDashboard.jsx";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ComposedChart
@@ -263,7 +264,7 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-const VIEWS = ['🎵 Registrar día', '📋 Historial', '📈 Gráficos', '📑 Estado de Resultados', '👥 RRHH · Liquidaciones'];
+const VIEWS = ['🏆 Dashboard Ejecutivo', '🎵 Registrar día', '📋 Historial', '📈 Gráficos', '📑 Estado de Resultados', '👥 RRHH · Liquidaciones'];
 
 export default function App() {
   const [view, setView]             = useState(0);
@@ -700,11 +701,12 @@ export default function App() {
       </div>
 
       <div style={{ padding:'16px 20px', maxWidth:1200, margin:'0 auto' }}>
-        {view === 0 && renderRegistrar()}
-        {view === 1 && renderHistorial()}
-        {view === 2 && renderGraficos()}
-        {view === 3 && <EstadoResultadosView ind={ind} records={records} date={date} card={card} sTitle={sTitle} btn={btn} />}
-        {view === 4 && <RRHHView card={card} sTitle={sTitle} btn={btn} inp={inp} grid={grid} showToast={showToast} />}
+        {view === 0 && <ExecutiveDashboard records={records} />}
+        {view === 1 && renderRegistrar()}
+        {view === 2 && renderHistorial()}
+        {view === 3 && renderGraficos()}
+        {view === 4 && <EstadoResultadosView ind={ind} records={records} date={date} card={card} sTitle={sTitle} btn={btn} />}
+        {view === 5 && <RRHHView card={card} sTitle={sTitle} btn={btn} inp={inp} grid={grid} showToast={showToast} />}
       </div>
 
       {toast && (
