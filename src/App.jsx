@@ -32,9 +32,10 @@ const EMPTY_FORM = {
 };
 
 function calcIndicadores(f) {
-  const ventasBrutas   = num(f.ventasBrutas);
+  const ventasBrutas   = num(f.ventasBrutas);  // monto cobrado al cliente CON IVA incluido
+  const iva            = ventasBrutas * (19/119); // IVA contenido dentro del precio (método de sustracción)
   const descuentos     = num(f.descuentos);
-  const ventasNetas    = ventasBrutas - descuentos;
+  const ventasNetas    = ventasBrutas > 0 ? (ventasBrutas / 1.19) - descuentos : 0; // sin IVA
   const clientes       = num(f.numClientes);
   const compras        = num(f.compras);
   const invInicial     = num(f.inventarioInicial);
@@ -75,7 +76,7 @@ function calcIndicadores(f) {
   const avancePE       = puntoEquilibrio > 0 ? Math.min((ventasNetas / puntoEquilibrio) * 100, 200) : 0;
 
   return {
-    ventasBrutas, descuentos, ventasNetas, ticket, clientes, compras,
+    ventasBrutas, descuentos, iva, ventasNetas, ticket, clientes, compras,
     costoVenta, costoVentaPct, margenBruto, mbPct, sueldos, sueldosPct,
     gastosFijos, gastosPct, otrosGastos, depreciacion, intereses, impuestos,
     utilidadOperativa, ebitda, ebitdaPct, resultadoAntesImp, utilidadNeta, margenNetoPct,
@@ -360,7 +361,7 @@ export default function App() {
         <div style={{ fontSize: 11, fontWeight: 800, color: BRAND.red, marginBottom: 14, letterSpacing: 1, textTransform: 'uppercase' }}>📥 Datos de operación diaria</div>
         <div style={grid(185)}>
           {[
-            ['ventasBrutas','Ventas Brutas ($)'],['descuentos','Descuentos / Devoluciones ($)'],
+            ['ventasBrutas','Ventas Brutas ($) — con IVA incluido'],['descuentos','Descuentos / Devoluciones ($)'],
             ['numClientes','N° de Clientes'],['compras','Compras del día ($)'],
             ['inventarioInicial','Inventario Inicial ($)'],['inventarioFinal','Inventario Final ($)'],
             ['sueldos','Sueldos / Nómina ($)'],['gastosFijos','Gastos Fijos ($)'],
@@ -379,7 +380,9 @@ export default function App() {
 
       <div style={sTitle}>💰 Ventas & Operación</div>
       <div style={grid(175)}>
-        <KpiCard label="Ventas Netas"     value={fmt(ind.ventasNetas)}  sub="ingreso real"                accent={BRAND.red}    />
+        <KpiCard label="Ventas Brutas (c/IVA)" value={fmt(ind.ventasBrutas)}  sub="monto cobrado al cliente"   accent={BRAND.orange || '#f97316'} />
+        <KpiCard label="IVA 19% (del período)" value={fmt(ind.iva)}           sub="a declarar al SII"          accent={BRAND.yellow} />
+        <KpiCard label="Ventas Netas (s/IVA)"  value={fmt(ind.ventasNetas)}   sub="base para costos"           accent={BRAND.red}    />
         <KpiCard label="Ticket Promedio"  value={fmt(ind.ticket)}       sub={ind.clientes + ' clientes'}  accent={BRAND.blue}   />
         <KpiCard label="N° Clientes"      value={ind.clientes}          sub="personas atendidas"          accent={BRAND.blue}   />
         <KpiCard label="Compras"          value={fmt(ind.compras)}      sub="mercadería ingresada"        accent={BRAND.yellow} />
