@@ -333,13 +333,6 @@ function imprimirLiq(trab, form, liq, periodo, params, empresa) {
 
       <!-- TOTAL LÍQUIDO -->
       <tr class="liquido"><td>TOTAL LÍQUIDO A PAGAR</td><td class="monto">${fmtP(liq.liquidoAPagar)}</td></tr>
-
-      <!-- APORTES EMPLEADOR -->
-      <tr><td colspan="2" style="background:#f0f4ff;font-weight:800;color:#1e40af;font-size:9px;letter-spacing:1px;padding:6px 8px">APORTES DEL EMPLEADOR (referencia)</td></tr>
-      <tr class="empleador"><td>Seguro Cesantía Empleador (${form.tipoContrato==='indefinido'?'2.4%':'3.0%'})</td><td class="monto">${fmtP(liq.aporteAfcEmp)}</td></tr>
-      <tr class="empleador"><td>SIS — Seguro Invalidez y Sobrevivencia (1.49%)</td><td class="monto">${fmtP(liq.aporteSis)}</td></tr>
-      <tr class="empleador"><td>Mutual — Accidentes del Trabajo (0.90%)</td><td class="monto">${fmtP(liq.aporteMutual)}</td></tr>
-      <tr class="empleador" style="font-weight:800"><td>Costo Total Empresa</td><td class="monto">${fmtP(liq.costoTotalEmpresa)}</td></tr>
     </tbody>
   </table>
 
