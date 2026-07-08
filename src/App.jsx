@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import ExecutiveDashboard from "./ExecutiveDashboard.jsx";
+import RRHHModule from "./RRHHModule.jsx";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ComposedChart
@@ -709,7 +710,7 @@ export default function App() {
         {view === 2 && renderHistorial()}
         {view === 3 && renderGraficos()}
         {view === 4 && <EstadoResultadosView ind={ind} records={records} date={date} card={card} sTitle={sTitle} btn={btn} />}
-        {view === 5 && <RRHHView card={card} sTitle={sTitle} btn={btn} inp={inp} grid={grid} showToast={showToast} />}
+        {view === 5 && <RRHHModule />}
       </div>
 
       {toast && (
