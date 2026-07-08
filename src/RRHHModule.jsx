@@ -70,8 +70,8 @@ function calcLiq(form, params) {
   // 1. Sueldo proporcional
   const sueldoProporcional = diasTrab < 30 ? Math.round((sueldoBase / 30) * diasTrab) : sueldoBase;
 
-  // 2. Diferencia sueldo mínimo — siempre visible, $0 si no aplica
-  const difSueldoMinimo = diasTrab >= 30 && sueldoBase < p.IMM ? Math.max(0, p.IMM - sueldoBase) : 0;
+  // 2. Diferencia sueldo mínimo — ingreso MANUAL
+  const difSueldoMinimo = parseFloat(form.difSueldoMinimo) || 0;
 
   // 3. Horas extra
   const recargHorasExtra = Math.round(horasExtra * valorHE);
@@ -171,6 +171,7 @@ const EMPTY_TRABAJADOR = {
 
 const EMPTY_FORM = {
   trabajadorId:'', sueldoBase:'', diasTrabajados:'30',
+  difSueldoMinimo:'0',
   horasExtra:'0', valorHoraExtra:'', diasDomingo:'0', valorDiaDom:'',
   cargas:'0', valorCarga:'2749',
   colacion:'', movilizacion:'',
@@ -806,6 +807,17 @@ export default function RRHHModule() {
               {[
                 ['sueldoBase','Sueldo Base ($)','number'],
                 ['diasTrabajados','Días Trabajados (de 30)','number'],
+              ].map(([id,label,type])=>(
+                <div key={id}><label style={s.lbl}>{label}</label>
+                  <input type={type} placeholder="0" value={formLiq[id]} onChange={e=>setFormLiq(p=>({...p,[id]:e.target.value}))} style={s.inp}/>
+                </div>
+              ))}
+              <div>
+                <label style={s.lbl}>Diferencia Sueldo Mínimo ($)</label>
+                <input type="number" placeholder="0" value={formLiq.difSueldoMinimo} onChange={e=>setFormLiq(p=>({...p,difSueldoMinimo:e.target.value}))} style={s.inp}/>
+                <div style={{fontSize:9,color:B.dim,marginTop:3}}>Ingresa manualmente si aplica</div>
+              </div>
+              {[
                 ['horasExtra','Horas Extra','number'],
                 ['valorHoraExtra','Valor Hora Extra ($)','number'],
                 ['diasDomingo','Días Domingo/Festivo trabajados','number'],
