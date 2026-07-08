@@ -161,7 +161,7 @@ function calcLiq(form, params) {
 // ══════════════════════════════════════════════════════════
 const fmt  = v => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
 const num  = v => parseFloat(v)||0;
-const mes  = m => new Date(m+'-01').toLocaleDateString('es-CL',{month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
+const mes  = m => { const [y,mo] = m.split('-'); return new Date(parseInt(y), parseInt(mo)-1, 1).toLocaleDateString('es-CL',{month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase()); };
 
 const EMPTY_TRABAJADOR = {
   nombre:'', apellidos:'', rut:'', cargo:'', tipoContrato:'indefinido',
