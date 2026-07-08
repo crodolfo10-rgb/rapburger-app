@@ -59,8 +59,10 @@ function calcLiq(form, params) {
   const diasDomingo    = parseFloat(form.diasDomingo)      || 0;
   const valorDiaDom    = parseFloat(form.valorDiaDom)      || 0;
   const cargas         = parseFloat(form.cargas)           || 0;
-  const valorCarga     = parseFloat(form.valorCarga)       || 2749; // valor referencial carga familiar 2026
+  const valorCarga     = parseFloat(form.valorCarga)       || 2749;
   const afpComisionPct = parseFloat(form.afpComision)      || p.AFP_COMISION_DEFAULT;
+  // Seguro de Cesantía: ingreso MANUAL (0 si no aplica, ej. trabajadores > 10 años)
+  const afcManual      = parseFloat(form.afcManual)        || 0;
   const anticipos      = parseFloat(form.anticipos)        || 0;
   const otrosDesc      = parseFloat(form.otrosDescuentos)  || 0;
 
@@ -68,10 +70,10 @@ function calcLiq(form, params) {
   // 1. Sueldo proporcional
   const sueldoProporcional = diasTrab < 30 ? Math.round((sueldoBase / 30) * diasTrab) : sueldoBase;
 
-  // 2. Diferencia sueldo mínimo (si sueldo base < IMM y trabajó mes completo)
+  // 2. Diferencia sueldo mínimo — siempre visible, $0 si no aplica
   const difSueldoMinimo = diasTrab >= 30 && sueldoBase < p.IMM ? Math.max(0, p.IMM - sueldoBase) : 0;
 
-  // 3. Horas extra (recargo 50% ya incluido en valorHoraExtra o calculado aparte)
+  // 3. Horas extra
   const recargHorasExtra = Math.round(horasExtra * valorHE);
 
   // 4. Días domingo y festivos trabajados
@@ -96,10 +98,10 @@ function calcLiq(form, params) {
   const baseAfpSalud = Math.min(totalImponible, topeAfpSalud);
 
   // ── DESCUENTOS LEGALES TRABAJADOR ──
-  // AFP: sobre total imponible (con tope)
-  const dscAfpOblig   = Math.round(baseAfpSalud * (p.AFP_TASA / 100));
-  const dscAfpComision = Math.round(baseAfpSalud * (afpComisionPct / 100));
-  const dscAfpTotal   = dscAfpOblig + dscAfpComision;
+  // AFP: SOLO la comisión ingresada (sin sumar el 10% obligatorio)
+  // La cotización obligatoria del 10% va directo a la cuenta individual del trabajador
+  // y NO se refleja como descuento en la liquidación chilena estándar
+  const dscAfpTotal = Math.round(baseAfpSalud * (afpComisionPct / 100));
 
   // Salud: sobre total imponible (con tope)
   let dscSalud;
@@ -112,12 +114,9 @@ function calcLiq(form, params) {
     dscSalud = Math.round(baseAfpSalud * (p.SALUD_TASA / 100));
   }
 
-  // AFC trabajador (solo indefinido)
-  const topeAfc = p.TOPE_AFC_UF * p.UF;
-  const baseAfc = Math.min(totalImponible, topeAfc);
-  const dscAfcTrab = form.tipoContrato === 'indefinido'
-    ? Math.round(baseAfc * (p.AFC_TRABAJADOR_INDEFINIDO / 100))
-    : 0;
+  // Seguro de Cesantía: MANUAL — el usuario ingresa el monto directamente
+  // (aplica 0 para trabajadores con > 10 años de servicio u otros casos)
+  const dscAfcTrab = afcManual;
 
   // Base tributable = total imponible - descuentos previsionales
   const baseTributable = totalImponible - dscAfpTotal - dscSalud - dscAfcTrab;
@@ -132,6 +131,8 @@ function calcLiq(form, params) {
   const liquidoAPagar  = alcanceLiquido - totalOtrosDesc;
 
   // ── APORTES EMPLEADOR ──
+  const topeAfc = p.TOPE_AFC_UF * p.UF;
+  const baseAfc = Math.min(totalImponible, topeAfc);
   const aporteAfcEmp  = form.tipoContrato === 'indefinido'
     ? Math.round(baseAfc * (p.AFC_EMPLEADOR_INDEFINIDO / 100))
     : Math.round(baseAfc * (p.AFC_EMPLEADOR_PLAZOFIJO / 100));
@@ -146,7 +147,7 @@ function calcLiq(form, params) {
     sueldoProporcional, difSueldoMinimo, recargHorasExtra, recargDiasDomingo, gratificacion,
     totalImponible, asigCargas, colacion, movilizacion, totalNoImponible, totalHaberes,
     baseAfpSalud, baseAfc, baseTributable,
-    dscAfpOblig, dscAfpComision, dscAfpTotal, dscSalud, dscAfcTrab,
+    dscAfpTotal, dscSalud, dscAfcTrab,
     impuestoUnico, totalDescuentosLegales,
     anticipos, otrosDesc, totalOtrosDesc,
     alcanceLiquido, liquidoAPagar,
@@ -173,6 +174,7 @@ const EMPTY_FORM = {
   horasExtra:'0', valorHoraExtra:'', diasDomingo:'0', valorDiaDom:'',
   cargas:'0', valorCarga:'2749',
   colacion:'', movilizacion:'',
+  afcManual:'0',
   anticipos:'', otrosDescuentos:'',
   tipoContrato:'indefinido', salud:'fonasa', planIsapreUF:'', afpComision:'0.58',
 };
@@ -292,7 +294,7 @@ function imprimirLiq(trab, form, liq, periodo, params, empresa) {
       <!-- HABERES IMPONIBLES -->
       <tr><td colspan="2" style="background:#fff8f8;font-weight:800;color:#E8191A;font-size:9px;letter-spacing:1px;padding:6px 8px">HABERES IMPONIBLES</td></tr>
       <tr><td>Sueldo Base</td><td class="monto">${fmtP(liq.sueldoProporcional)}</td></tr>
-      ${liq.difSueldoMinimo>0?`<tr><td>Diferencia Sueldo Mínimo</td><td class="monto">${fmtP(liq.difSueldoMinimo)}</td></tr>`:''}
+      <tr><td>Diferencia Sueldo Mínimo</td><td class="monto">${fmtP(liq.difSueldoMinimo)}</td></tr>
       ${liq.recargHorasExtra>0?`<tr><td>Recargo Horas Extra (${form.horasExtra} hrs)</td><td class="monto">${fmtP(liq.recargHorasExtra)}</td></tr>`:''}
       ${liq.recargDiasDomingo>0?`<tr><td>Días Domingos y Festivos (${form.diasDomingo} días)</td><td class="monto">${fmtP(liq.recargDiasDomingo)}</td></tr>`:''}
       <tr><td>Gratificación Legal (25% base imponible sin gratificación)</td><td class="monto">${fmtP(liq.gratificacion)}</td></tr>
@@ -312,7 +314,7 @@ function imprimirLiq(trab, form, liq, periodo, params, empresa) {
 
       <!-- DESCUENTOS -->
       <tr><td colspan="2" style="background:#fff8f8;font-weight:800;color:#E8191A;font-size:9px;letter-spacing:1px;padding:6px 8px">DESCUENTOS LEGALES</td></tr>
-      <tr><td>Cotización Obligatoria AFP (${(10+num(form.afpComision||0.58)).toFixed(2)}%)</td><td class="monto">-${fmtP(liq.dscAfpTotal)}</td></tr>
+      <tr><td>AFP — Comisión (${form.afpComision||0.58}%)</td><td class="monto">-${fmtP(liq.dscAfpTotal)}</td></tr>
       <tr><td>Cotización de Salud (${form.salud==='isapre'?'Isapre':'Fonasa 7%'})</td><td class="monto">-${fmtP(liq.dscSalud)}</td></tr>
       ${liq.dscAfcTrab>0?`<tr><td>Seguro de Cesantía Trabajador (0.6%)</td><td class="monto">-${fmtP(liq.dscAfcTrab)}</td></tr>`:''}
       ${liq.impuestoUnico>0?`<tr><td>Impuesto Único 2ª Categoría</td><td class="monto">-${fmtP(liq.impuestoUnico)}</td></tr>`:''}
@@ -837,6 +839,11 @@ export default function RRHHModule() {
           <div style={s.secTitle(B.dim)}>➖ Otros Descuentos</div>
           <div style={s.card}>
             <div style={s.grid(185)}>
+              <div>
+                <label style={s.lbl}>Seguro de Cesantía ($) — ingreso manual</label>
+                <input type="number" placeholder="0" value={formLiq.afcManual} onChange={e=>setFormLiq(p=>({...p,afcManual:e.target.value}))} style={s.inp}/>
+                <div style={{fontSize:9,color:B.dim,marginTop:3}}>Dejar en 0 si no aplica (ej. &gt;10 años servicio)</div>
+              </div>
               {[['anticipos','Anticipos ($)','number'],['otrosDescuentos','Otros Descuentos ($)','number']].map(([id,label,type])=>(
                 <div key={id}><label style={s.lbl}>{label}</label>
                   <input type={type} placeholder="0" value={formLiq[id]} onChange={e=>setFormLiq(p=>({...p,[id]:e.target.value}))} style={s.inp}/>
@@ -857,7 +864,7 @@ export default function RRHHModule() {
 
                 <div style={{fontSize:9,fontWeight:800,color:B.green,padding:'8px 14px 2px',letterSpacing:1,textTransform:'uppercase'}}>Haberes Imponibles</div>
                 <LiqRow label="Sueldo Base" value={liqPreview.sueldoProporcional} indent sub={`${formLiq.diasTrabajados||30}/30 días`}/>
-                {liqPreview.difSueldoMinimo>0&&<LiqRow label="Diferencia Sueldo Mínimo" value={liqPreview.difSueldoMinimo} indent/>}
+                <LiqRow label="Diferencia Sueldo Mínimo" value={liqPreview.difSueldoMinimo} indent/>
                 {liqPreview.recargHorasExtra>0&&<LiqRow label="Recargo Horas Extra" value={liqPreview.recargHorasExtra} indent sub={`${formLiq.horasExtra||0} hrs`}/>}
                 {liqPreview.recargDiasDomingo>0&&<LiqRow label="Días Domingos y Festivos" value={liqPreview.recargDiasDomingo} indent sub={`${formLiq.diasDomingo||0} días`}/>}
                 <LiqRow label="Gratificación Legal (25%)" value={liqPreview.gratificacion} indent/>
@@ -876,9 +883,9 @@ export default function RRHHModule() {
                 <LiqRow label="TOTAL HABERES" value={liqPreview.totalHaberes} bold border color={B.text}/>
 
                 <div style={{fontSize:9,fontWeight:800,color:B.red,padding:'8px 14px 2px',letterSpacing:1,textTransform:'uppercase'}}>Descuentos Legales</div>
-                <LiqRow label={`AFP (10% + ${formPreview.afpComision||0.58}% comisión)`} value={-liqPreview.dscAfpTotal} indent color={B.red}/>
+                <LiqRow label={`AFP — Comisión (${formPreview.afpComision||0.58}%)`} value={-liqPreview.dscAfpTotal} indent color={B.red}/>
                 <LiqRow label={`Salud (${formPreview.salud==='isapre'?'Isapre':'Fonasa 7%'})`} value={-liqPreview.dscSalud} indent color={B.red}/>
-                {liqPreview.dscAfcTrab>0&&<LiqRow label="Seg. Cesantía Trabajador (0.6%)" value={-liqPreview.dscAfcTrab} indent color={B.red}/>}
+                {liqPreview.dscAfcTrab>0&&<LiqRow label="Seguro de Cesantía" value={-liqPreview.dscAfcTrab} indent color={B.red}/>}
                 {liqPreview.impuestoUnico>0&&<LiqRow label="Impuesto Único 2ª Cat." value={-liqPreview.impuestoUnico} indent color={B.red}/>}
                 <LiqRow label="Total Descuentos Legales" value={-liqPreview.totalDescuentosLegales} bold border color={B.red}/>
 
